@@ -5,6 +5,9 @@ lua-resty-chash - A generic consistent hash implementation for OpenResty/LuaJIT
 
 lua-resty-roundrobin - A generic roundrobin implementation for OpenResty/LuaJIT
 
+[![Build Status](https://travis-ci.org/iresty/lua-resty-balancer.svg?branch=master)](https://travis-ci.org/iresty/lua-resty-balancer)
+[![License](https://img.shields.io/badge/License-bsd-blue.svg)](https://github.com/iresty/lua-resty-balancer#copyright-and-license)
+
 Table of Contents
 =================
 
