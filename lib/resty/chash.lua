@@ -5,6 +5,10 @@
 local bit = require "bit"
 local ffi = require 'ffi'
 
+local utils = require "resty.balancer.utils"
+
+local new_tab = utils.new_tab
+local copy = utils.copy
 
 local ffi_new = ffi.new
 local C = ffi.C
@@ -38,13 +42,6 @@ void chash_point_delete(chash_point_t *old_points, uint32_t old_length,
     uint32_t id);
 ]]
 
-
-local ok, new_tab = pcall(require, "table.new")
-if not ok or type(new_tab) ~= "function" then
-    new_tab = function (narr, nrec) return {} end
-end
-
-
 --
 -- Find shared object file package.cpath, obviating the need of setting
 -- LD_LIBRARY_PATH
@@ -57,6 +54,12 @@ local function load_shared_lib(so_name)
     local io_close = io.close
 
     local cpath = package.cpath
+
+    local postfix = ".so"
+    if ffi.os == "OSX" then
+        postfix = ".dylib"
+    end
+    so_name = so_name .. postfix
 
     for k, _ in string_gmatch(cpath, "[^;]+") do
         local fpath = string_match(k, "(.*/)")
@@ -77,9 +80,9 @@ local _M = {}
 local mt = { __index = _M }
 
 
-local clib = load_shared_lib("librestychash.so")
+local clib = load_shared_lib("librestychash")
 if not clib then
-    error("can not load librestychash.so")
+    error("can not load librestychash")
 end
 
 local CONSISTENT_POINTS = 160   -- points per server
@@ -95,10 +98,7 @@ local function _precompute(nodes)
         total_weight = total_weight + weight
     end
 
-    local newnodes = new_tab(0, n)
-    for id, weight in pairs(nodes) do
-        newnodes[id] = weight
-    end
+    local newnodes = copy(nodes)
 
     local ids = new_tab(n, 0)
     local npoints = total_weight * CONSISTENT_POINTS

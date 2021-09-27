@@ -101,6 +101,7 @@ Synopsis
 
             local rr_up = package.loaded.my_rr_up
 
+            -- Note that Round Robin picks the first server randomly
             local server = rr_up:find()
 
             assert(b.set_current_peer(server))
@@ -137,6 +138,7 @@ The `id` should be `table.concat({host, string.char(0), port})` like the nginx c
 when we need to keep consistency with nginx chash.
 
 The `id` can be any string value when we do not need to keep consistency with nginx chash.
+The `weight` should be a non negative integer.
 
 ```lua
 local nodes = {
