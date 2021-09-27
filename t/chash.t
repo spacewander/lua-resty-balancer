@@ -41,7 +41,6 @@ __DATA__
             local res = {}
             for i = 1, 100 * 1000 do
                 local id = chash:find(i)
-
                 if res[id] then
                     res[id] = res[id] + 1
                 else
@@ -49,8 +48,9 @@ __DATA__
                 end
             end
 
-            for id, num in pairs(res) do
-                ngx.say(id, ": ", num)
+            for i=1, 3 do
+                local id = "server"..i
+                ngx.say(id..": ", res[id])
             end
 
             ngx.say("points number: ", chash.npoints)
@@ -59,8 +59,8 @@ __DATA__
 --- request
 GET /t
 --- response_body
-server2: 14743
 server1: 77075
+server2: 14743
 server3: 8182
 points number: 2080
 --- no_error_log
@@ -304,9 +304,18 @@ diff: 9745
 
             local chash = resty_chash:new(servers)
 
+            local success = true
+            local count = 0
+
             for id, weight in pairs(chash.nodes) do
-                ngx.say(id, ": ", weight)
+                count = count + 1
+                if servers[id] ~= weight then
+                    success = false
+                end
             end
+            ngx.say("count: ", count)
+            ngx.say("success: ",success)
+
             ngx.say("points number: ", chash.npoints)
             ngx.say("size: ", chash.size)
 
@@ -318,9 +327,16 @@ diff: 9745
             }
             chash:reinit(new_servers)
 
+            count = 0
             for id, weight in pairs(chash.nodes) do
-                ngx.say(id, ": ", weight)
+                count = count + 1
+                if new_servers[id] ~= weight then
+                    success = false
+                end
             end
+            ngx.say("count: ", count)
+            ngx.say("success: ",success)
+
             ngx.say("points number: ", chash.npoints)
             ngx.say("size: ", chash.size)
         }
@@ -328,16 +344,60 @@ diff: 9745
 --- request
 GET /t
 --- response_body
-server1: 10
-server2: 2
-server3: 1
+count: 3
+success: true
 points number: 2080
 size: 2080
 reinit
-server4: 1
-server5: 2
+count: 2
+success: true
 points number: 480
 size: 480
+--- no_error_log
+[error]
+--- timeout: 30
+
+
+
+=== TEST 6: random key fuzzer
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua_block {
+            math.randomseed(ngx.now())
+
+            local ffi = require "ffi"
+            local resty_chash = require "resty.chash"
+
+            local function random_string()
+                local len = math.random(10, 100)
+                local buf = ffi.new("char [?]", len)
+                for i = 0, len - 1 do
+                    buf[i] = math.random(0, 255)
+                end
+
+                return ffi.string(buf, len)
+            end
+
+            for i = 1, 30 do
+                local servers = {}
+
+                local len = math.random(1, 100)
+                for j = 1, len do
+                    local key = random_string()
+                    servers[key] = math.random(1, 100)
+                end
+
+                local chash = resty_chash:new(servers)
+            end
+
+            ngx.say("done")
+        }
+    }
+--- request
+GET /t
+--- response_body
+done
 --- no_error_log
 [error]
 --- timeout: 30

@@ -3,21 +3,16 @@ local pairs = pairs
 local next = next
 local tonumber = tonumber
 local setmetatable = setmetatable
+local math_random = math.random
 
+local utils = require "resty.balancer.utils"
+
+local copy = utils.copy
+local nkeys = utils.nkeys
+local new_tab = utils.new_tab
 
 local _M = {}
 local mt = { __index = _M }
-
-
-local function copy(nodes)
-    local newnodes = {}
-    for id, weight in pairs(nodes) do
-        newnodes[id] = weight
-    end
-
-    return newnodes
-end
-
 
 local _gcd
 _gcd = function (a, b)
@@ -46,10 +41,24 @@ local function get_gcd(nodes)
     return only_key, gcd, max_weight
 end
 
+local function get_random_node_id(nodes)
+    local count = nkeys(nodes)
+
+    local id = nil
+    local random_index = math_random(count)
+
+    for _ = 1, random_index do
+        id = next(nodes, id)
+    end
+
+    return id
+end
+
 
 function _M.new(_, nodes)
     local newnodes = copy(nodes)
     local only_key, gcd, max_weight = get_gcd(newnodes)
+    local last_id = get_random_node_id(nodes)
 
     local self = {
         nodes = newnodes,  -- it's safer to copy one
@@ -57,7 +66,7 @@ function _M.new(_, nodes)
         max_weight = max_weight,
         gcd = gcd,
         cw = max_weight,
-        last_id = nil,
+        last_id = last_id,
     }
     return setmetatable(self, mt)
 end
@@ -68,7 +77,7 @@ function _M.reinit(self, nodes)
     self.only_key, self.gcd, self.max_weight = get_gcd(newnodes)
 
     self.nodes = newnodes
-    self.last_id = nil
+    self.last_id = get_random_node_id(nodes)
     self.cw = self.max_weight
 end
 
